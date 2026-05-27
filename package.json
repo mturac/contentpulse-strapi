@@ -1,0 +1,22 @@
+{
+  "name": "strapi-plugin-content-pulse",
+  "version": "1.0.0",
+  "description": "ContentPulse - Semantic Decay & Freshness Engine for Strapi v5",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "strapi plugin:build",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "chrono-node": "^2.7.7"
+  },
+  "peerDependencies": {
+    "@strapi/strapi": "^5.0.0"
+  },
+  "strapi": {
+    "name": "content-pulse",
+    "description": "Detect content freshness and semantic decay",
+    "kind": "plugin"
+  },
+  "license": "MIT"
+}
