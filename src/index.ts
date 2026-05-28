@@ -62,10 +62,10 @@ async function analyzeAndSave(
     // Field might not be present — non-fatal
   }
 
-  // Fire webhook if score is below threshold
+  // Fire webhook if score is below threshold — fire-and-forget, must not block saves
   const threshold = config.warningThreshold ?? 80
   if (analysis.score < threshold && config.webhookUrl) {
-    await notify(
+    void notify(
       {
         documentId: result.id as string,
         contentType: (result.contentType as string) ?? '',
@@ -79,7 +79,7 @@ async function analyzeAndSave(
         threshold,
         slackChannel: config.slackChannel,
       }
-    )
+    ).catch((err) => strapi.log.error('[ContentPulse] webhook fire error:', err))
   }
 }
 
@@ -120,8 +120,25 @@ export default {
       })
     }
 
+    // ── Auth guard ────────────────────────────────────────────────────────────
+    // Validate Strapi admin JWT before serving any ContentPulse endpoints.
+    const requireAdmin = async (
+      ctx: Parameters<typeof strapi.server.router.get>[1] extends (ctx: infer C, ...a: unknown[]) => unknown ? C : never,
+      next: () => Promise<void>
+    ) => {
+      try {
+        const token = (ctx.request.header.authorization ?? '').replace(/^Bearer\s+/i, '')
+        if (!token) { ctx.status = 401; ctx.body = { error: 'Unauthorized' }; return }
+        const verified = await strapi.admin.services.auth.checkCredentials({ token })
+        if (!verified) { ctx.status = 401; ctx.body = { error: 'Unauthorized' }; return }
+      } catch {
+        ctx.status = 401; ctx.body = { error: 'Unauthorized' }; return
+      }
+      await next()
+    }
+
     // REST API: GET /api/content-pulse/dashboard
-    strapi.server.router.get('/api/content-pulse/dashboard', async (ctx) => {
+    strapi.server.router.get('/api/content-pulse/dashboard', requireAdmin, async (ctx) => {
       const entries: unknown[] = []
 
       for (const uid of monitored) {
@@ -152,6 +169,7 @@ export default {
     // REST API: POST /api/content-pulse/reanalyze/:uid/:documentId
     strapi.server.router.post(
       '/api/content-pulse/reanalyze/:uid/:documentId',
+      requireAdmin,
       async (ctx) => {
         const { uid, documentId } = ctx.params as Record<string, string>
         try {

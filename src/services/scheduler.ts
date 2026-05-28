@@ -19,7 +19,6 @@ export interface SchedulerConfig {
   collections?: string[]     // UIDs to scan (required)
   maxAgeDays?: number        // passed through to analyzer
   batchSize?: number         // documents per batch (default: 50)
-  webhookThreshold?: number  // if set, fires notifier for docs below this score
 }
 
 const DEFAULT_CRON = '0 3 * * *'
@@ -94,6 +93,9 @@ async function scanCollection(
       hasMore = false
       break
     }
+
+    // If this batch is smaller than batchSize, it's the last one — no extra query needed
+    if (docs.length < batchSize) hasMore = false
 
     for (const doc of docs) {
       const contentToAnalyze = textFields.map((f) => (doc as Record<string, unknown>)[f]).find(Boolean)
