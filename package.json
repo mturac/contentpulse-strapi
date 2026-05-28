@@ -2,8 +2,21 @@
   "name": "strapi-plugin-content-pulse",
   "version": "0.1.0",
   "description": "ContentPulse — Semantic Decay & Freshness Engine for Strapi v5. Detect stale dates, outdated version references, and decayed content before your readers do.",
-  "main": "src/index.ts",
-  "files": ["src", "admin", "strapi-server.js"],
+  "main": "strapi-server.js",
+  "exports": {
+    "./strapi-admin": {
+      "source": "./admin/src/index.ts",
+      "import": "./dist/admin/index.mjs",
+      "require": "./dist/admin/index.js",
+      "default": "./dist/admin/index.js"
+    }
+  },
+  "files": [
+    "src",
+    "admin",
+    "dist",
+    "strapi-server.js"
+  ],
   "keywords": [
     "strapi",
     "strapi-plugin",
@@ -18,7 +31,7 @@
     "url": "https://github.com/mturac/contentpulse-strapi"
   },
   "scripts": {
-    "build": "strapi plugin:build",
+    "build": "strapi-plugin build",
     "test": "vitest run",
     "prepublishOnly": "npm run build"
   },
@@ -26,12 +39,27 @@
     "chrono-node": "^2.7.7"
   },
   "peerDependencies": {
-    "@strapi/strapi": "^5.0.0"
+    "@strapi/design-system": "^2.0.0",
+    "@strapi/icons": "^2.0.0",
+    "@strapi/strapi": "^5.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
   },
   "strapi": {
     "name": "content-pulse",
     "description": "Detect content freshness and semantic decay",
     "kind": "plugin"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@strapi/design-system": "^2.2.0",
+    "@strapi/icons": "^2.2.0",
+    "@strapi/sdk-plugin": "^6.1.0",
+    "@strapi/strapi": "^5.47.0",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.9.3"
+  }
 }
