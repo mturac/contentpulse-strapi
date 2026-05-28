@@ -149,6 +149,29 @@ export const FreshnessDashboard: React.FC = () => {
     }
   }
 
+  const handleExport = async (format: 'csv' | 'json') => {
+    try {
+      const token = (window as unknown as Record<string, Record<string, string>>).__STRAPI_DATA__?.token
+        ?? localStorage.getItem('jwtToken')
+        ?? ''
+      const res = await fetch(`/api/content-pulse/export?format=${format}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error('Export failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `contentpulse-export.${format}`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('[ContentPulse] Export error:', err)
+    }
+  }
+
   // ── Filter + Sort ────────────────────────────────────────────────────────
   const filtered = entries
     .filter((e) => {
@@ -191,6 +214,12 @@ export const FreshnessDashboard: React.FC = () => {
         >
           Refresh
         </Button>
+          <Button variant="secondary" onClick={() => handleExport('csv')}>
+            Export CSV
+          </Button>
+          <Button variant="secondary" onClick={() => handleExport('json')}>
+            Export JSON
+          </Button>
       </Flex>
 
       {/* Stats row */}

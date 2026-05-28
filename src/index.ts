@@ -83,6 +83,27 @@ async function analyzeAndSave(
   }
 }
 
+// ─── CSV export helper ───────────────────────────────────────────────────────
+
+function toCSV(entries: Array<{
+  contentType: string
+  documentId: string | number
+  title: string | null
+  score: number
+  warnings: Array<{ severity: string }>
+  lastAnalyzedAt: string | null
+}>): string {
+  const SEVERITY_ORDER = ['critical', 'high', 'medium', 'low']
+  const header = 'contentType,documentId,title,score,status,warningCount,worstSeverity,lastAnalyzedAt'
+  const rows = entries.map((e) => {
+    const worst = SEVERITY_ORDER.find((s) => e.warnings.some((w) => w.severity === s)) ?? ''
+    const status = e.score >= 80 ? 'fresh' : e.score >= 40 ? 'stale' : 'critical'
+    const title = (e.title ?? '').replace(/"/g, '""')
+    return `${e.contentType},${e.documentId},"${title}",${e.score},${status},${e.warnings.length},${worst},${e.lastAnalyzedAt ?? ''}`
+  })
+  return [header, ...rows].join('\n')
+}
+
 // ─── Plugin definition ────────────────────────────────────────────────────────
 
 export default {
@@ -209,6 +230,49 @@ export default {
         }
       }
     )
+
+    // REST API: GET /api/content-pulse/export?format=csv|json
+    strapi.server.router.get('/api/content-pulse/export', requireAdmin, async (ctx) => {
+      const format = (ctx.query as Record<string, string>).format === 'csv' ? 'csv' : 'json'
+      const date = new Date().toISOString().split('T')[0]
+
+      // Collect entries (same logic as /dashboard)
+      const entries: Array<{
+        contentType: string
+        documentId: string | number
+        title: string | null
+        score: number
+        warnings: Array<{ severity: string }>
+        lastAnalyzedAt: string | null
+      }> = []
+
+      for (const uid of monitored) {
+        try {
+          const docs = await strapi.db.query(uid).findMany({ limit: 5000 })
+          for (const doc of docs) {
+            const d = doc as Record<string, unknown>
+            entries.push({
+              contentType: uid,
+              documentId: (d.documentId ?? d.id) as string | number,
+              title: (d.title ?? d.name ?? d.slug ?? null) as string | null,
+              score: (d._pulseScore ?? 100) as number,
+              warnings: (() => { try { return JSON.parse((d._pulseWarnings as string) ?? '[]') } catch { return [] } })(),
+              lastAnalyzedAt: (d._lastAnalyzedAt ?? null) as string | null,
+            })
+          }
+        } catch { /* collection may not have pulse fields */ }
+      }
+
+      if (format === 'csv') {
+        ctx.set('Content-Type', 'text/csv')
+        ctx.set('Content-Disposition', `attachment; filename="contentpulse-${date}.csv"`)
+        ctx.body = toCSV(entries)
+      } else {
+        ctx.set('Content-Type', 'application/json')
+        ctx.set('Content-Disposition', `attachment; filename="contentpulse-${date}.json"`)
+        ctx.body = JSON.stringify({ exportedAt: new Date().toISOString(), totalDocuments: entries.length, data: entries }, null, 2)
+      }
+    })
   },
 
   bootstrap({ strapi }: { strapi: Core.Strapi }) {

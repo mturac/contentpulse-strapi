@@ -1,11 +1,26 @@
 {
   "name": "strapi-plugin-content-pulse",
-  "version": "1.0.0",
-  "description": "ContentPulse - Semantic Decay & Freshness Engine for Strapi v5",
+  "version": "0.1.0",
+  "description": "ContentPulse — Semantic Decay & Freshness Engine for Strapi v5. Detect stale dates, outdated version references, and decayed content before your readers do.",
   "main": "src/index.ts",
+  "files": ["src", "admin", "strapi-server.js"],
+  "keywords": [
+    "strapi",
+    "strapi-plugin",
+    "content-freshness",
+    "semantic-decay",
+    "content-management",
+    "headless-cms",
+    "typescript"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mturac/contentpulse-strapi"
+  },
   "scripts": {
     "build": "strapi plugin:build",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "chrono-node": "^2.7.7"
